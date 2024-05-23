@@ -12,18 +12,22 @@ import ppls1.imp.chp as imp
 import ppls1.exp.chp as exp
 
 
-filmY = 20
+filmWidth = 16
 
-domainX = 60
-domainY = filmY*3
+domainX = 128
+domainY = filmWidth*3
 domainZ = domainX
+
+numBinsX = domainX/1  #div by desired width
+numBinsZ = domainZ/1  #div by desired width
 
 temperature = .7 
 
 execStep = None
 
-ls1_exec = '/home/niemann/ls1-mardyn_master/build/src/MarDyn'
-work_folder = f"T{temperature}_d{filmY}" #_{str(datetime.now()).replace(' ', '')}
+ls1_exec = '../../ls1-mardyn/build/src/MarDyn'
+# ls1_exec = '/home/niemann/ls1-mardyn_master/build/src/MarDyn'
+work_folder = f"T{temperature}_d{filmWidth}_x{domainX}" #_{str(datetime.now()).replace(' ', '')}
 stepName_init = "init"
 stepName_equi = "equi"
 configName_init = "config_init.xml"
@@ -103,7 +107,7 @@ def step2_equi():
         distanceFromSymmetryPlane = abs(ry - 0.5*yBox)
 
 
-        if distanceFromSymmetryPlane <= filmY/2:  
+        if distanceFromSymmetryPlane <= filmWidth/2:  
             if random.random() <= (rhol/rhoBulk):  # Only keep some particles based on density
                 chpFilm.append(par)
         else:                          # vapor (outside drop / inside bubble)
@@ -385,7 +389,7 @@ def template_init(boxx, boxy, boxz, temperature, rhol):
 def template_equi(boxx, boxy, boxz, temperature):
     simsteps = int(10e3)
     writefreq = int(1e3)
-    rsfreq = int(writefreq)
+    capiSamplingFreq = int(200)
     return f"""<?xml version='1.0' encoding='UTF-8'?>
 <mardyn version="20100525" >
 
@@ -522,27 +526,22 @@ def template_equi(boxx, boxy, boxz, temperature):
         </range>
     </plugin>
 
-    
-	<plugin name="RegionSampling">
-		<region>
-			<coords>
-				<lcx>0</lcx> <lcy refcoordsID="0">0.0</lcy> <lcz>0</lcz>
-				<ucx>box</ucx> <ucy refcoordsID="0">box</ucy> <ucz>box</ucz>
-			</coords>
-			
-			<sampling type="profiles">   <!-- Sampling profiles of various scalar and vector quantities, e.g. temperature, density, force, hydrodynamic velocity -->	
-				<control>
-					<start>0</start>           <!-- start time step -->
-					<frequency>{rsfreq}</frequency>   <!-- frequency of writing profiles -->
-					<stop>1000000000</stop>             <!-- stop time step -->
-				</control>
-				<subdivision type="number">       <!-- type="number | width" => subdivision of region into bins -->
-					<width>10</width>         <!-- bin width -->
-					<number>48</number>         <!-- number of bins -->
-				</subdivision>
-			</sampling>
-		</region>
-	</plugin>
+    <plugin name="COMaligner">
+        <x>false</x>  <!-- align along x-axis (default): true | do no align along x-axis: false -->
+        <y>true</y>  <!-- align along y-axis (default): true | do no align along y-axis: false -->
+        <z>false</z>  <!-- align along z-axis (default): true | do no align along z-axis: false -->
+        <interval>INT</interval>  <!-- frequency of algignment in number of time steps between alignments -->
+        <correctionFactor>1</correctionFactor>  <!-- correction factor [0-1] to apply with 1 meaning full alignment and 0 no alignment at all -->
+    </plugin>
+
+    <plugin name="CapiSampling">
+        <numBinsX>{numBinsX}</numBinsX>                  <!-- # of sampling bins in x direction; default 64 -->
+        <numBinsZ>{numBinsX}</numBinsZ>                  <!-- # of sampling bins in z direction; default 64 -->
+        <writefrequency>{capiSamplingFreq}</writefrequency>        <!-- Simstep to write out result file; default 10000 -->
+        <minimumFilmWidth>{filmWidth/2}</minimumFilmWidth>  <!-- minimum guaranteed width of bulk liquid (needed for rho_liq calculation) -->
+        <minimumGasPhase>{filmWidth/2}</minimumGasPhase>    <!-- minimum guaranteed width of gas phase to left and right of film (needed for rho_vap) -->
+    </plugin>
+
 </simulation>
 </mardyn>
 """
