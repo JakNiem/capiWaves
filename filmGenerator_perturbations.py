@@ -12,7 +12,7 @@ import ppls1.imp.chp as imp
 import ppls1.exp.chp as exp
 
 
-filmWidth = 16
+filmWidth = 18
 
 domainX = 128
 domainY = filmWidth*3
@@ -25,9 +25,9 @@ temperature = .7
 
 execStep = None
 
-ls1_exec = '../../ls1-mardyn/build/src/MarDyn'
+ls1_exec = os.path.abspath('./ls1-mardyn/build/src/MarDyn')
 # ls1_exec = '/home/niemann/ls1-mardyn_master/build/src/MarDyn'
-work_folder = f"T{temperature}_d{filmWidth}_x{domainX}" #_{str(datetime.now()).replace(' ', '')}
+work_folder = f"T{temperature}_d{filmWidth}_x{domainX}_forcedWave" #_{str(datetime.now()).replace(' ', '')}
 stepName_init = "init"
 stepName_equi = "equi"
 configName_init = "config_init.xml"
@@ -105,9 +105,12 @@ def step2_equi():
         rz = par['rz']
         
         distanceFromSymmetryPlane = abs(ry - 0.5*yBox)
+        forcedWaveCoordX = xBox/2
+        forcedWaveCoordY = yBox/2 + filmWidth
+        forcedWaveWidth = 8
+        forcedWaveHeigth = 8
 
-
-        if distanceFromSymmetryPlane <= filmWidth/2:  
+        if (distanceFromSymmetryPlane <= filmWidth/2) or ((abs(forcedWaveCoordX-rx)<forcedWaveWidth/2) and (abs(forcedWaveCoordY- ry)<forcedWaveHeigth)):  
             if random.random() <= (rhol/rhoBulk):  # Only keep some particles based on density
                 chpFilm.append(par)
         else:                          # vapor (outside drop / inside bubble)

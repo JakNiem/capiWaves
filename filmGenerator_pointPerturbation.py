@@ -12,7 +12,9 @@ import ppls1.imp.chp as imp
 import ppls1.exp.chp as exp
 
 
-filmWidth = 16
+postfix = '_pointPerturbation'
+
+filmWidth = 18
 
 domainX = 128
 domainY = filmWidth*3
@@ -25,9 +27,9 @@ temperature = .7
 
 execStep = None
 
-ls1_exec = '../../ls1-mardyn/build/src/MarDyn'
+ls1_exec = os.path.abspath('./ls1-mardyn/build/src/MarDyn')
 # ls1_exec = '/home/niemann/ls1-mardyn_master/build/src/MarDyn'
-work_folder = f"T{temperature}_d{filmWidth}_x{domainX}" #_{str(datetime.now()).replace(' ', '')}
+work_folder = f"T{temperature}_d{filmWidth}_x{domainX}{postfix}" #_{str(datetime.now()).replace(' ', '')}
 stepName_init = "init"
 stepName_equi = "equi"
 configName_init = "config_init.xml"
@@ -105,9 +107,15 @@ def step2_equi():
         rz = par['rz']
         
         distanceFromSymmetryPlane = abs(ry - 0.5*yBox)
+        perturbationCoordX = xBox/2 
+        perturbationCoordZ = zBox/2 
+        perturbationCoordY = yBox/2 + filmWidth
+        perturbationRadius = 8
 
+        distFromPerturbationCenterSquared = (perturbationCoordX - rx)**2 + (perturbationCoordY-ry)**2 + (perturbationCoordZ-rz)**2
+        insidePerturbation = (distFromPerturbationCenterSquared < perturbationRadius**2)
 
-        if distanceFromSymmetryPlane <= filmWidth/2:  
+        if (distanceFromSymmetryPlane <= filmWidth/2) or (insidePerturbation):  
             if random.random() <= (rhol/rhoBulk):  # Only keep some particles based on density
                 chpFilm.append(par)
         else:                          # vapor (outside drop / inside bubble)
@@ -387,8 +395,8 @@ def template_init(boxx, boxy, boxz, temperature, rhol):
 
 
 def template_equi(boxx, boxy, boxz, temperature):
-    simsteps = int(10e3)
-    writefreq = int(1e3)
+    simsteps = int(500e3)
+    cp_writefreq = int(100e3)
     capiSamplingFreq = int(200)
     return f"""<?xml version='1.0' encoding='UTF-8'?>
 <mardyn version="20100525" >
@@ -499,7 +507,7 @@ def template_equi(boxx, boxy, boxz, temperature):
     <output>
         <outputplugin name="CheckpointWriter">
             <type>binary</type>
-            <writefrequency>{writefreq}</writefrequency>
+            <writefrequency>{cp_writefreq}</writefrequency>
             <outputprefix>cp_binary_equi</outputprefix>
         </outputplugin>
     </output>
